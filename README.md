@@ -6,7 +6,7 @@
 
 **Hyprland shell — QuickShell morphing UI, themed and simple**
 
-![HYPRLAND](https://img.shields.io/badge/Hyprland-white?style=flat-square&logo=wayland&logoColor=white&labelColor=%23492730&color=%236b3a4a) ![QUICKSHELL](https://img.shields.io/badge/QuickShell-white?style=flat-square&logo=qt&logoColor=white&labelColor=%23492730&color=%236b3a4a) ![LICENSE](https://img.shields.io/github/license/:irQuacksALot/loaf-shell?style=flat-square&logo=github&logoColor=white&labelColor=%23492730&color=%236b3a4a)
+![HYPRLAND](https://img.shields.io/badge/Hyprland-white?style=flat-square&logo=wayland&logoColor=white&labelColor=%23492730&color=%236b3a4a) ![QUICKSHELL](https://img.shields.io/badge/QuickShell-white?style=flat-square&logo=qt&logoColor=white&labelColor=%23492730&color=%236b3a4a) ![LICENSE](https://img.shields.io/github/license/SirQuacksALot/loaf-shell?style=flat-square&logo=github&logoColor=white&labelColor=%23492730&color=%236b3a4a)
 
 
 <pre>
