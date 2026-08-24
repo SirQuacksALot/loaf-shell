@@ -56,7 +56,7 @@
 <a name="contribution"></a>
 ## Contribution
 
-> [!INFO]
+> [!NOTE]
 > This is a private hobby project and may or may not contain ai generated or influenced content as I simply and sadly do not have the time to push this project to higher grounds and get a good grip on quickshell and qml. 
 
 **How to commit**
