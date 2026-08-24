@@ -43,7 +43,7 @@
 - pipewire
 - UPower
 - NetworkManager
-- bluz
+- bluez
 - polkit
 - brightnessctl
 - systemd
