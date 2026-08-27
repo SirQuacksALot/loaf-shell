@@ -36,9 +36,10 @@ views/
   WifiView.qml                      WLAN An/Aus-Toggle, erreichbar über Control Center (fertig, ausbaubar)
   BluetoothView.qml                   Bluetooth An/Aus-Toggle, dito                      (fertig, ausbaubar)
   PowerMenuView.qml                 Sperren/Abmelden/Neustart/Herunterfahren           (fertig)
-  TimerView.qml                       Timer/Stopwatch/Pomodoro                          (Stub)
-  WorkspacesView.qml                    Hyprland-Workspace-Übersicht                      (Stub)
-  GithubView.qml                          GitHub-Contribution-Heatmap                      (Stub)
+  AudioSourceView.qml                 Standard-Ausgabe/-Eingabe wählen (Pipewire)        (fertig)
+  TimerView.qml                           Timer/Stopwatch/Pomodoro                          (Stub)
+  WorkspacesView.qml                        Hyprland-Workspace-Übersicht                      (Stub)
+  GithubView.qml                              GitHub-Contribution-Heatmap                      (Stub)
 ```
 
 Jede Stub-View hat einen konkreten Umsetzungsvorschlag als Kommentar am

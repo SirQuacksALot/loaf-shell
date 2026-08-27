@@ -110,6 +110,10 @@ Singleton {
         readonly property string bluetoothTooltip: "Bluetooth-Einstellungen öffnen"
         readonly property string volume: "Lautstärke"
         readonly property string brightness: "Helligkeit"
+        readonly property string audioSource: "Audioquelle"
+        readonly property string audioSourceTooltip: "Audio-Ein-/Ausgabegerät wählen"
+        readonly property string vpn: "VPN"
+        readonly property string vpnTooltip: "VPN noch nicht verfügbar"
     }
 
     readonly property QtObject github: QtObject {
@@ -153,6 +157,13 @@ Singleton {
         readonly property string turnOn: "WLAN einschalten"
         readonly property string sectionLabel: "WLAN"
         readonly property string searchingNetworks: "Suche nach Netzwerken…"
+    }
+
+    readonly property QtObject audioSource: QtObject {
+        readonly property string outputsLabel: "Ausgabe"
+        readonly property string inputsLabel: "Eingabe"
+        readonly property string noOutputs: "Keine Ausgabegeräte gefunden"
+        readonly property string noInputs: "Keine Eingabegeräte gefunden"
     }
 
     readonly property QtObject battery: QtObject {

@@ -40,4 +40,5 @@ MorphContainer {
     Views.GithubView { islandRoot: shape.islandRoot }
     Views.WallpaperView { islandRoot: shape.islandRoot }
     Views.ClipboardView { islandRoot: shape.islandRoot }
+    Views.AudioSourceView { islandRoot: shape.islandRoot }
 }

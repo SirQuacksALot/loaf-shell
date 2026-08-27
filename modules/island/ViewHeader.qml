@@ -15,6 +15,13 @@ import "../../services" as Services
 // unterschiedlichen (und zeitweise ganz auseinandergelaufenen) Kopfzeilen
 // - eine einzige Stelle für "wie sieht der Kopf einer View aus".
 //
+// `showStatus` (Standard true) blendet Akku/Verbindung optional komplett
+// aus - für Views, deren preferredWidth so schmal ist, dass die Icons
+// eng wirken, oder deren Inhalt selbst schon eine klare Verbindungs-
+// Anzeige hat (z.B. AudioSourceView.qml/VpnView.qml). Betrifft NUR die
+// jeweilige View, nicht den Standard - Standard bleibt für alle übrigen
+// Views unverändert mit Icons.
+//
 // View-spezifische Kontrollen (WLAN/Bluetooth-Toggle, Zwischenablage-
 // Leeren-Button, ...) gehören NICHT hierher - die bekommen ihre eigene
 // Zeile direkt darunter (siehe WifiView.qml/BluetoothView.qml/
@@ -34,6 +41,7 @@ RowLayout {
     id: root
 
     required property var islandRoot
+    property bool showStatus: true
 
     Layout.fillWidth: true
     spacing: 14
@@ -63,8 +71,12 @@ RowLayout {
     // Weder Battery- noch Network-Indikator sind Buttons (ActionButton/
     // MenuButton/Toggle) mit eingebauter Tooltip-Infra - HoverHandler +
     // ButtonTooltip daher hier direkt als zusätzliche Kinder drangehängt.
+    // visible statt Existenz an showStatus zu hängen - QtQuick Layouts
+    // nimmt unsichtbare Items automatisch aus der Breitenberechnung raus,
+    // kein Sonderfall für "showStatus false" nötig.
     Widgets.BatteryIndicator {
         id: batteryIndicator
+        visible: root.showStatus
         Layout.alignment: Qt.AlignVCenter
         // Gleicher 2px-Ausgleich wie ursprünglich in InfoView.qml: der
         // dünne (1.3px) Outline-Border ist anti-aliased und "verschwimmt"
@@ -81,6 +93,7 @@ RowLayout {
 
     LucideIcon {
         id: networkIcon
+        visible: root.showStatus
         Layout.alignment: Qt.AlignVCenter
         name: Services.Network.iconName
         size: 15

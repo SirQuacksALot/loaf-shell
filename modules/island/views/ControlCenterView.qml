@@ -22,8 +22,10 @@ MorphItem {
     // War 405 - ThemedSlider ist seit dessen Redesign (vast-shell-Optik,
     // an die 34px hohen Icon-MenuButtons angeglichen) 34px statt 16px
     // hoch (implicitHeight: trackHeight + trackSizeDiff), zwei Stück
-    // (Lautstärke/Helligkeit) macht +36 insgesamt.
-    preferredHeight: 405 + 2 * 18
+    // (Lautstärke/Helligkeit) macht +36 insgesamt. Nochmal +58 für die
+    // zweite Text-Button-Zeile (VPN/Audioquelle, 44px hoch + ein
+    // zusätzlicher 14px-Spacing-Abstand der ColumnLayout).
+    preferredHeight: 405 + 2 * 18 + 58
 
     required property var islandRoot
 
@@ -46,7 +48,9 @@ MorphItem {
     // Stub) ist komplett raus - unbenutzter Stub, siehe shell.qml/
     // IslandShape.qml. "powermenu" ist neu dazugekommen - war vorher ein
     // eigener Button in InfoView.qml, InfoView hat jetzt nur noch den
-    // normalen ViewHeader (Akku/Verbindung + Schließen).
+    // normalen ViewHeader (Akku/Verbindung + Schließen). VPN/Audioquelle
+    // sind NICHT hier drin - die haben mehr Gewicht (eigene Text-Button-
+    // Zeile wie WLAN/Bluetooth, siehe unten) statt kleiner Icon-Kacheln.
     readonly property var quickActions: [
         { id: "dnd",         icon: "bell-off",       active: Services.Notifications.doNotDisturb, kind: "toggle" },
         { id: "clipboard",   icon: "clipboard-list", active: view.islandRoot.viewMode === "clipboard", kind: "view" },
@@ -72,10 +76,10 @@ MorphItem {
         // (Netzwerkliste, Geräteliste, ...). `active` trackt weiterhin den
         // echten An/Aus-Zustand (z.B. für spätere Nutzung anderswo), wirkt
         // sich dank `showActiveState: false` aber NICHT mehr aufs Styling
-        // aus (siehe MenuButton.qml) - sonst sähe dieser Text-Button,
-        // sobald WLAN/Bluetooth an ist, mit gefülltem Akzent-Hintergrund
-        // deutlich anders aus als die übrigen, gleich gewichteten
-        // Text-Buttons hier.
+        // aus (siehe MenuButton.qml) - sonst sähe dieser Button, sobald
+        // WLAN/Bluetooth an ist, mit gefülltem Akzent-Hintergrund aus der
+        // Reihe der übrigen, gleich gewichteten Text-Buttons (VPN/
+        // Audioquelle) unten.
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -102,6 +106,46 @@ MorphItem {
                 available: Services.Bluetooth.available
                 tooltip: Localization.controlCenter.bluetoothTooltip
                 onTapped: view.islandRoot.openView("bluetooth")
+            }
+        }
+
+        // Gleiche Optik/Gewicht wie die WLAN/Bluetooth-Zeile oben, eigene
+        // Zeile statt in den kleinen Icon-Kacheln unten - "active" ist
+        // hier kein An/Aus-Zustand (ein Audiogerät ist immer "da", VPN
+        // hat mehrere Profile), sondern schlicht "ist die jeweilige View
+        // gerade offen", damit die Buttons trotzdem sichtbar auf Hover/
+        // Tap reagieren wie ihre Vorbilder.
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            MenuButton {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 0
+                Layout.preferredHeight: 44
+                showLabel: true
+                label: Localization.controlCenter.vpn
+                active: view.islandRoot.viewMode === "vpn"
+                // Noch deaktiviert - VpnView.qml/services/Vpn.qml sind
+                // bewusst noch Mock (siehe dortiger Kommentar), bis klar
+                // ist, welche VPN-Clients konkret unterstützt werden
+                // sollen. Button ist schon an seinem finalen Platz
+                // sichtbar, aber nicht antippbar (MenuButtons `available`
+                // dimmt + deaktiviert TapHandler/Fokus, dasselbe Muster
+                // wie Services.Bluetooth.available beim Bluetooth-Button).
+                available: false
+                tooltip: Localization.controlCenter.vpnTooltip
+                onTapped: view.islandRoot.openView("vpn")
+            }
+            MenuButton {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 0
+                Layout.preferredHeight: 44
+                showLabel: true
+                label: Localization.controlCenter.audioSource
+                active: view.islandRoot.viewMode === "audiosource"
+                tooltip: Localization.controlCenter.audioSourceTooltip
+                onTapped: view.islandRoot.openView("audiosource")
             }
         }
 
