@@ -46,6 +46,16 @@ MorphItem {
         // Peek-Rand fehlt).
         alwaysVisible: true
 
+        // fitContent (Body wrappt statt einzeilig abzuschneiden) statt
+        // fixer 44px - siehe AudioSourceView.qml für dieselbe Umstellung.
+        // Card bekommt hier NUR anchors.top/left/right von außen (siehe
+        // Delegate unten), NIE anchors.bottom/anchors.fill - genau DAS
+        // war der eigentliche Bug bei AudioSourceView: ein externes
+        // anchors.fill überschreibt ListCards eigene fitContent-Höhen-
+        // Bindung komplett, die Karte bliebe sonst für immer auf ihrer
+        // allerersten Höhe stehen.
+        fitContent: true
+
         Widgets.RoundedCover {
             Layout.alignment: Qt.AlignVCenter
             size: 28
@@ -64,14 +74,37 @@ MorphItem {
                 font.pixelSize: Theme.font.size - 1
                 elide: Text.ElideRight
             }
-            Text {
+
+            // Loader statt Text direkt als ColumnLayout-Kind - exakt
+            // dasselbe Muster wie ClipboardView.qml/AudioSourceView.qml
+            // (dortige Kommentare für die ausführliche Begründung): ein
+            // Text mit Layout.fillWidth UND wrapMode:Wrap kennt seine
+            // gewrappte implicitHeight erst NACH der Breitenzuweisung,
+            // Loader spiegelt die implizite Größe seines geladenen Items
+            // dagegen nach außen.
+            Loader {
                 Layout.fillWidth: true
-                visible: text.length > 0
-                text: card.notification.body
-                color: Theme.colors.textMuted
-                font.family: Theme.font.family
-                font.pixelSize: Theme.font.size - 2
-                elide: Text.ElideRight
+                visible: card.notification.body.length > 0
+                active: visible
+                sourceComponent: bodyComponent
+            }
+
+            Component {
+                id: bodyComponent
+                Text {
+                    width: parent.width
+                    text: card.notification.body
+                    color: Theme.colors.textMuted
+                    font.family: Theme.font.family
+                    font.pixelSize: Theme.font.size - 2
+                    wrapMode: Text.Wrap
+                    // Deckel gegen ausufernde Kartenhöhe bei sehr langen
+                    // Benachrichtigungstexten - danach "…". 3 statt der
+                    // 2 in AudioSourceView.qml, Notification-Bodies sind
+                    // im Schnitt gehaltvoller als ein Gerätename.
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                }
             }
         }
 
@@ -196,8 +229,17 @@ MorphItem {
                     // an implicitHeight, das müssen wir hier also explizit
                     // selbst tun (sonst bliebe height bei 0, ListView würde
                     // alle Karten übereinander stapeln statt untereinander).
-                    height: 44 + groupCard.peekCount * 4
+                    // Basiert jetzt auf topCard.height statt fest 44 - die
+                    // oberste Karte kann dank fitContent (siehe
+                    // NotificationCard oben) inzwischen mehrzeilig sein,
+                    // ein hartkodierter Wert hätte sonst die NÄCHSTE
+                    // Gruppen-Karte überlappt, sobald ein Body umbricht.
+                    height: topCard.height + groupCard.peekCount * 4
 
+                    // Die dekorativen Peek-Kanten dahinter - Höhe folgt
+                    // ebenfalls topCard.height, sonst passt die Fanning-
+                    // Optik (gleiche Höhe, nur nach unten/innen versetzt)
+                    // nicht mehr zur tatsächlichen Kartenhöhe.
                     Repeater {
                         model: groupCard.peekCount
                         delegate: Rectangle {
@@ -208,7 +250,7 @@ MorphItem {
                             anchors.right: parent.right
                             anchors.leftMargin: (index + 1) * 6
                             anchors.rightMargin: (index + 1) * 6
-                            height: 44
+                            height: topCard.height
                             radius: 8
                             color: Theme.colors.surface
                             opacity: 0.5 - index * 0.2
@@ -216,6 +258,7 @@ MorphItem {
                     }
 
                     NotificationCard {
+                        id: topCard
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
