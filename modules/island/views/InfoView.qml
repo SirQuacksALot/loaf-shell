@@ -154,6 +154,10 @@ MorphItem {
                     showLabel: true
                     showBackground: false
                     contentPadding: 0
+                    // Reiner Text-Link - bewusst akzentfarben statt
+                    // MenuButtons gedämpftem Standard (siehe dortiger
+                    // Kommentar), sonst nicht als klickbar erkennbar.
+                    inactiveContentColor: Theme.colors.accent
                     tooltip: Localization.info.clearAllTooltip
                     onTapped: Services.Notifications.clearAll()
                 }

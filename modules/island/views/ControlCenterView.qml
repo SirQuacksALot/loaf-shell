@@ -69,9 +69,13 @@ MorphItem {
         // WLAN/Bluetooth als Text-Buttons (mehr Gewicht - Verbindungen sind
         // die "wichtigeren" Toggles). Öffnen jetzt jeweils eine eigene View
         // (WifiView/BluetoothView) statt direkt zu toggeln - dort ausbaubar
-        // (Netzwerkliste, Geräteliste, ...). Status kommt weiterhin über
-        // die Akzentfarbe rein (aktiv = eingefärbt), kein Statustext im
-        // Label - konsistent mit den Text-Buttons anderswo (z.B. PowerMenuView).
+        // (Netzwerkliste, Geräteliste, ...). `active` trackt weiterhin den
+        // echten An/Aus-Zustand (z.B. für spätere Nutzung anderswo), wirkt
+        // sich dank `showActiveState: false` aber NICHT mehr aufs Styling
+        // aus (siehe MenuButton.qml) - sonst sähe dieser Text-Button,
+        // sobald WLAN/Bluetooth an ist, mit gefülltem Akzent-Hintergrund
+        // deutlich anders aus als die übrigen, gleich gewichteten
+        // Text-Buttons hier.
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -83,6 +87,7 @@ MorphItem {
                 showLabel: true
                 label: Localization.controlCenter.wifiLabel
                 active: Services.Network.wifiEnabled
+                showActiveState: false
                 tooltip: Localization.controlCenter.wifiTooltip
                 onTapped: view.islandRoot.openView("wifi")
             }
@@ -93,6 +98,7 @@ MorphItem {
                 showLabel: true
                 label: Localization.controlCenter.bluetoothLabel
                 active: Services.Bluetooth.enabled
+                showActiveState: false
                 available: Services.Bluetooth.available
                 tooltip: Localization.controlCenter.bluetoothTooltip
                 onTapped: view.islandRoot.openView("bluetooth")

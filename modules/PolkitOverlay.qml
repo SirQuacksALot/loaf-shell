@@ -208,6 +208,10 @@ Scope {
                         label: Localization.polkit.ok
                         contentPadding: 12
                         Layout.preferredHeight: 34
+                        // Primäre Aktion des Dialogs - bewusst akzentfarben
+                        // statt MenuButtons gedämpftem Standard (siehe
+                        // dortiger Kommentar).
+                        inactiveContentColor: Theme.colors.accent
                         onTapped: root.submit()
                     }
                 }

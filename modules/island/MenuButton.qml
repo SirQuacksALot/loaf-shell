@@ -18,6 +18,14 @@ Rectangle {
     property bool showLabel: false
 
     property bool active: false
+    // true = `active` wirkt sich aufs Styling aus (gefüllter
+    // Akzent-Hintergrund + Hintergrundfarbe als Inhalt), false = `active`
+    // bleibt reiner Datenwert, Styling sieht IMMER wie "inactive" aus.
+    // Für Buttons, die einen echten Zustand tracken wollen (z.B. WLAN/
+    // Bluetooth-An/Aus in ControlCenterView.qml), ohne dass der Button
+    // dadurch optisch aus der Reihe der übrigen, gleich gewichteten
+    // Text-Buttons tanzt.
+    property bool showActiveState: true
     property bool available: true
     property bool showBackground: true
 
@@ -27,7 +35,13 @@ Rectangle {
     property color activeColor: Theme.colors.accent
     property color inactiveColor: Theme.colors.surface
     property color activeContentColor: Theme.colors.background
-    property color inactiveContentColor: root.showLabel ? Theme.colors.accent : Theme.colors.textMuted
+    // EIN Standard über Icon- UND Label-Modus hinweg (früher im Label-
+    // Modus Theme.colors.accent, das ließ z.B. WLAN/Bluetooth im "aus"-
+    // Zustand aussehen wie ein aktiver CTA-Link). Stellen, die bewusst
+    // trotzdem akzentfarbenen Text wollen (Polkit-OK-Button als primäre
+    // Aktion, "Alle löschen" in InfoView.qml als Link), überschreiben das
+    // explizit statt sich auf einen vom Modus abhängigen Default zu verlassen.
+    property color inactiveContentColor: Theme.colors.textMuted
 
     // Leer = kein Tooltip.
     property string tooltip: ""
@@ -37,8 +51,12 @@ Rectangle {
     implicitWidth: (root.showLabel ? labelItem.implicitWidth : iconItem.width) + root.contentPadding * 2
     implicitHeight: (root.showLabel ? labelItem.implicitHeight : iconItem.height) + root.contentPadding
 
+    // "aktiv" fürs Styling ist active UND showActiveState - siehe dortiger
+    // Kommentar.
+    readonly property bool visualActive: root.active && root.showActiveState
+
     radius: 12
-    color: root.showBackground ? (root.active ? root.activeColor : root.inactiveColor) : "transparent"
+    color: root.showBackground ? (root.visualActive ? root.activeColor : root.inactiveColor) : "transparent"
     opacity: root.available ? 1 : 0.4
 
     // Siehe ActionButton.qml für die Erklärung des Musters (Tab-Kette +
@@ -86,7 +104,7 @@ Rectangle {
         anchors.centerIn: parent
         name: root.icon
         size: root.iconSize
-        color: root.active ? root.activeContentColor : root.inactiveContentColor
+        color: root.visualActive ? root.activeContentColor : root.inactiveContentColor
     }
 
     Text {
@@ -96,7 +114,7 @@ Rectangle {
         anchors.leftMargin: root.contentPadding
         anchors.verticalCenter: parent.verticalCenter
         text: root.label
-        color: root.active ? root.activeContentColor : root.inactiveContentColor
+        color: root.visualActive ? root.activeContentColor : root.inactiveContentColor
         font.family: Theme.font.family
         font.pixelSize: Theme.font.size - 1
         font.bold: true
