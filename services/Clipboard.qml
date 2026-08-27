@@ -21,6 +21,37 @@ Singleton {
     readonly property bool available: checkProc.checked ? checkProc.found : true
     property var entries: []   // [{ id, raw, preview, isImage }]
 
+    // Bild-Vorschauen: cliphist liefert in `list` für Bilder nur den
+    // Platzhaltertext "[[ binary data ... ]]", die echten Pixel gibt's erst
+    // über `cliphist decode <id>`. Damit nicht bei jedem Öffnen/Refresh neu
+    // decodiert wird, landet das Ergebnis einmalig als PNG im Cache - Dateiname
+    // ist die cliphist-id, die ist stabil solange der Eintrag existiert und
+    // wird von cliphist nie wiederverwendet.
+    readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/quickshell/clipboard-thumbs"
+    property var _thumbRequested: ({})  // id -> true, verhindert doppeltes Decodieren
+
+    signal thumbReady(string id)
+
+    function thumbPath(entry) {
+        return root.thumbDir + "/" + entry.id + ".png";
+    }
+
+    // Stößt das Decodieren für einen Bild-Eintrag an, falls noch nicht
+    // geschehen. thumbReady(id) feuert, sobald die Datei fertig geschrieben
+    // ist - die View hört darauf, um ihr Image neu zu laden.
+    function ensureThumbnail(entry) {
+        if (!entry || !entry.isImage) return;
+        if (root._thumbRequested[entry.id]) return;
+        root._thumbRequested[entry.id] = true;
+
+        const path = root.thumbPath(entry);
+        const proc = thumbProcComponent.createObject(root, {
+            entryId: entry.id,
+            command: ["sh", "-c", 'test -s "$1" || cliphist decode "$2" > "$1"', "_", path, entry.id]
+        });
+        proc.running = true;
+    }
+
     function refresh() {
         listProc.running = true;
     }
@@ -56,6 +87,32 @@ Singleton {
         property bool found: false
         command: ["sh", "-c", "command -v cliphist"]
         onExited: exitCode => { checkProc.found = exitCode === 0; checkProc.checked = true; }
+    }
+
+    Process {
+        id: mkThumbDirProc
+        command: ["mkdir", "-p", root.thumbDir]
+    }
+
+    // Kurzlebiger, dynamisch erzeugter Process pro Thumbnail-Decode -
+    // im Gegensatz zu copyProc/deleteProc/wipeProc kann hier mehr als ein
+    // Aufruf gleichzeitig laufen (mehrere neue Bild-Einträge auf einmal).
+    Component {
+        id: thumbProcComponent
+        Process {
+            property string entryId
+            onExited: exitCode => {
+                if (exitCode !== 0) {
+                    // Fehlgeschlagen (z.B. Eintrag zwischenzeitlich aus der
+                    // cliphist-DB gefallen) - nächster ensureThumbnail-Aufruf
+                    // darf es erneut versuchen.
+                    delete root._thumbRequested[entryId];
+                } else {
+                    root.thumbReady(entryId);
+                }
+                destroy();
+            }
+        }
     }
 
     Process {
@@ -112,12 +169,13 @@ Singleton {
 
     Process {
         id: wipeProc
-        command: ["cliphist", "wipe"]
+        command: ["sh", "-c", 'cliphist wipe; rm -rf "$1"', "_", root.thumbDir]
         onExited: root.refresh()
     }
 
     Component.onCompleted: {
         checkProc.running = true;
+        mkThumbDirProc.running = true;
         root.refresh();
     }
 }

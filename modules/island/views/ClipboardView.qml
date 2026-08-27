@@ -138,13 +138,57 @@ MorphItem {
                     color: Theme.colors.textMuted
                 }
 
-                Text {
+                // Loader statt direktem Text/Image als RowLayout-Kind: nur
+                // dessen eigene Layout.fillWidth/-preferredHeight wirken auf
+                // die Zeilenhöhe (row.implicitHeight, siehe ListCard.qml) -
+                // Layout.* auf den Items INNERHALB der Components unten wäre
+                // wirkungslos, die sind ja nicht direkte RowLayout-Kinder.
+                // Bei Bildern deshalb feste 120px hier statt sich auf
+                // Image.implicitHeight zu verlassen - die bleibt bei der
+                // rohen Pixelgröße der Quelle (z.B. 359px bei einem
+                // Screenshot), auch wenn Image selbst auf 120px geclampt
+                // wird, und würde die Karte sonst genauso aufblähen.
+                Loader {
                     Layout.fillWidth: true
-                    text: card.modelData.preview
-                    wrapMode: Text.Wrap
-                    color: Theme.colors.text
-                    font.family: Theme.font.family
-                    font.pixelSize: Theme.font.size - 1
+                    Layout.preferredHeight: card.modelData.isImage ? 120 : undefined
+                    sourceComponent: card.modelData.isImage ? thumbComponent : textComponent
+                }
+
+                Component {
+                    id: thumbComponent
+                    Image {
+                        width: parent.width
+                        height: 120
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        source: "file://" + Services.Clipboard.thumbPath(card.modelData)
+
+                        Component.onCompleted: Services.Clipboard.ensureThumbnail(card.modelData)
+
+                        Connections {
+                            target: Services.Clipboard
+                            function onThumbReady(id) {
+                                if (id !== card.modelData.id) return;
+                                // Gleicher Pfad wie vorher - Image lädt bei
+                                // identischem source-String nicht neu, daher
+                                // kurz zurücksetzen und neu zuweisen.
+                                source = "";
+                                source = "file://" + Services.Clipboard.thumbPath(card.modelData);
+                            }
+                        }
+                    }
+                }
+
+                Component {
+                    id: textComponent
+                    Text {
+                        width: parent.width
+                        text: card.modelData.preview
+                        wrapMode: Text.Wrap
+                        color: Theme.colors.text
+                        font.family: Theme.font.family
+                        font.pixelSize: Theme.font.size - 1
+                    }
                 }
 
                 ActionButton {
