@@ -157,6 +157,18 @@ Singleton {
         readonly property string turnOn: "WLAN einschalten"
         readonly property string sectionLabel: "WLAN"
         readonly property string searchingNetworks: "Suche nach Netzwerken…"
+        readonly property string knownNetworksLabel: "Bekannte Netzwerke"
+        readonly property string otherNetworksLabel: "Andere Netzwerke"
+        readonly property string qrTooltip: "WLAN als QR-Code teilen"
+        readonly property string qrHint: "Mit dem Handy scannen, um beizutreten"
+        readonly property string qrFailed: "QR-Code konnte nicht erstellt werden"
+        readonly property string ipLabel: "IP-Adresse"
+        readonly property string latencyLabel: "Latenz"
+        readonly property string packetLossLabel: "Paketverlust"
+        readonly property string receivingLabel: "Empfangen"
+        readonly property string sendingLabel: "Gesendet"
+        readonly property string downloadedLabel: "Heruntergeladen"
+        readonly property string uploadedLabel: "Hochgeladen"
     }
 
     readonly property QtObject audioSource: QtObject {
