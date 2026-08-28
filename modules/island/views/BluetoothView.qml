@@ -285,6 +285,11 @@ MorphItem {
             model: view.otherDevicesModel
             boundsBehavior: Flickable.StopAtBounds
             highlightMoveDuration: 100
+            // Siehe WifiView.qml für die ausführliche Begründung - ohne
+            // das war die Liste per Tab nach dem ersten Verlassen nie
+            // wieder erreichbar (MorphContainer.qmls Tab-Handler
+            // traversiert nur Items mit activeFocusOnTab:true).
+            activeFocusOnTab: true
 
             function activateCurrent() {
                 const item = view.otherDevicesModel[list.currentIndex]

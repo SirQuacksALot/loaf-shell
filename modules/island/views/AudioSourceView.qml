@@ -160,6 +160,12 @@ MorphItem {
             model: column.devices
             boundsBehavior: Flickable.StopAtBounds
             highlightMoveDuration: 100
+            // Siehe WifiView.qml für die ausführliche Begründung - ohne
+            // das war keine der beiden Listen (Ausgabe/Eingabe) per Tab
+            // erreichbar, sobald man einmal zu einem anderen Control
+            // weitergesprungen ist (MorphContainer.qmls Tab-Handler
+            // traversiert nur Items mit activeFocusOnTab:true).
+            activeFocusOnTab: true
 
             function activateCurrent() {
                 const n = column.devices[listView.currentIndex]

@@ -97,6 +97,13 @@ MorphItem {
             model: Services.Clipboard.entries
             boundsBehavior: Flickable.StopAtBounds
             highlightMoveDuration: 100
+            // Siehe WifiView.qml für die ausführliche Begründung - ohne
+            // das war die Liste per Tab nach dem ersten Verlassen nie
+            // wieder erreichbar (MorphContainer.qmls Tab-Handler
+            // traversiert nur Items mit activeFocusOnTab:true). Gleicher
+            // Bug wie bei WifiView/BluetoothView/AudioSourceView, hier
+            // mitgefixt statt nur dort.
+            activeFocusOnTab: true
 
             Keys.onReturnPressed: view.activateEntry(Services.Clipboard.entries[list.currentIndex])
             Keys.onEnterPressed: view.activateEntry(Services.Clipboard.entries[list.currentIndex])

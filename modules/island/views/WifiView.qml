@@ -484,6 +484,17 @@ MorphItem {
                 model: view.otherNetworksModel
                 boundsBehavior: Flickable.StopAtBounds
                 highlightMoveDuration: 100
+                // Ohne das: MorphContainer.qmls zentraler Tab-Handler
+                // wandert nur durch Items mit activeFocusOnTab:true
+                // (nextItemInFocusChain() traversiert genau die).
+                // list.forceActiveFocus() beim Öffnen der View gibt der
+                // Liste zwar EINMAL Fokus, aber sobald man per Tab zu
+                // einem anderen Control weiterspringt (z.B. Toggle/QR-
+                // Button oben), war die Liste selbst nie Teil der
+                // Tab-Kette und dadurch per Tab nie wieder erreichbar -
+                // besonders bei Zeilen ohne eigenen Action-Button
+                // (unbekannte Netze) blieb man dann komplett ausgesperrt.
+                activeFocusOnTab: true
 
                 function activateCurrent() {
                     const item = view.otherNetworksModel[list.currentIndex]
