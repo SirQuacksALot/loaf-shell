@@ -90,6 +90,9 @@ Singleton {
         readonly property string discoverTooltip: "20s nach Geräten suchen"
         readonly property string discoveringEmpty: "Suche nach Geräten…"
         readonly property string noDevicesFound: "Keine Geräte gefunden"
+        readonly property string connectedLabel: "Verbundene Geräte"
+        readonly property string knownLabel: "Bekannte Geräte"
+        readonly property string foundLabel: "Andere Geräte"
     }
 
     readonly property QtObject clipboard: QtObject {

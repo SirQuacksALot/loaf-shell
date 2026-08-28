@@ -17,7 +17,7 @@ MorphItem {
     id: view
 
     name: "bluetooth"
-    preferredWidth: 300
+    preferredWidth: 340
     preferredHeight: 360
 
     required property var islandRoot
@@ -31,19 +31,19 @@ MorphItem {
     readonly property var discoveredDevices: Services.Bluetooth.devices.filter(d => !d.connected && !d.paired)
 
     // Gemischtes Modell für die EINE scrollbare Liste: bekannte Geräte,
-    // optional eine Trennlinie, dann neu gefundene. Zwei separate
-    // ListViews hätten sich nicht gemeinsam scrollen lassen - ein
-    // ListView kennt aber auch keine "Trennlinie zwischen zwei
-    // Abschnitten" von sich aus, daher hier ein Marker-Eintrag
-    // (`divider: true`) statt eines echten Geräts, den der Delegate
-    // unten per Loader anders rendert.
+    // dann neu gefundene. Zwei separate ListViews hätten sich nicht
+    // gemeinsam scrollen lassen - ein ListView kennt aber auch keine
+    // "Abschnitts-Überschrift" von sich aus, daher hier Marker-Einträge
+    // (`kind: "header"`) statt eines echten Geräts, die der Delegate
+    // unten per Loader anders rendert. Jeder Header nur, wenn seine
+    // Gruppe tatsächlich nicht leer ist - vorher gab's dafür nur eine
+    // Trennlinie OHNE erkennbar zu machen, WAS da eigentlich folgt.
     readonly property var otherDevicesModel: {
         const items = [];
-        for (const d of view.pairedDevices) items.push({ divider: false, device: d });
-        if (view.pairedDevices.length > 0 && view.discoveredDevices.length > 0) {
-            items.push({ divider: true, device: null });
-        }
-        for (const d of view.discoveredDevices) items.push({ divider: false, device: d });
+        if (view.pairedDevices.length > 0) items.push({ kind: "header", label: Localization.bluetooth.knownLabel, device: null });
+        for (const d of view.pairedDevices) items.push({ kind: "device", device: d });
+        if (view.discoveredDevices.length > 0) items.push({ kind: "header", label: Localization.bluetooth.foundLabel, device: null });
+        for (const d of view.discoveredDevices) items.push({ kind: "device", device: d });
         return items;
     }
 
@@ -93,6 +93,12 @@ MorphItem {
         property bool current: false
         Layout.fillWidth: true
         selected: row.current
+        // 0 statt der ListCard-Standard-8 - siehe WifiView.qml/NetworkRow
+        // für die ausführliche Begründung (Abstand kommt jetzt von jedem
+        // Kind einzeln per Layout.leftMargin, wegen des ActionButtons
+        // unten - negative Margins werden von Qt Quick Layouts
+        // stillschweigend auf 0 geklemmt).
+        spacing: 0
 
         readonly property bool busy: row.device.pairing || row.device.state === BluetoothDeviceState.Connecting || row.device.state === BluetoothDeviceState.Disconnecting
 
@@ -104,6 +110,7 @@ MorphItem {
 
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.leftMargin: 8
             spacing: 0
 
             Text {
@@ -135,6 +142,7 @@ MorphItem {
 
         LucideIcon {
             visible: row.busy
+            Layout.leftMargin: 8
             name: "loader-circle"
             size: 15
             color: Theme.colors.textMuted
@@ -149,20 +157,32 @@ MorphItem {
         }
 
         // Trennen (verbunden) bzw. Vergessen (gekoppelt, nicht
-        // verbunden). Optisch nur bei Hover ODER Tastaturfokus sichtbar,
-        // aber IMMER Teil der Tab-Kette, solange die Aktion gilt - siehe
-        // WifiView.qml für die ausführliche Begründung (opacity statt
-        // visible, sonst nie per Tab erreichbar).
+        // verbunden). EIN Code-Pfad für alle Zeilen (verfügbar/nie
+        // verfügbar) - siehe WifiView.qml/NetworkRow für die
+        // ausführliche Begründung. `shown` verlangt available MIT, der
+        // Button bleibt für nie verfügbare Zeilen also strukturell
+        // exakt derselbe wie im nicht gehoverten Ruhezustand einer
+        // verfügbaren Zeile.
         ActionButton {
             id: rowAction
             available: !row.busy && (row.device.connected || row.device.paired)
-            opacity: rowAction.available && (row.hovered || rowAction.activeFocus) ? 1 : 0
+            readonly property bool shown: rowAction.available && (row.hovered || rowAction.activeFocus)
+            Layout.preferredWidth: rowAction.shown ? rowAction.diameter : 0
+            // Nur bei Hover/Fokus die 8px-Lücke davor - row.spacing ist
+            // jetzt 0 (siehe oben), jedes Kind trägt seinen eigenen
+            // Abstand.
+            Layout.leftMargin: rowAction.shown ? 8 : 0
+            opacity: rowAction.shown ? 1 : 0
             icon: row.device.connected ? "log-out" : "trash-2"
             iconSize: 13
             diameter: 24
             showBackground: false
             tooltip: row.device.connected ? Localization.bluetooth.disconnect : Localization.bluetooth.forget
             onTapped: row.device.connected ? row.device.disconnect() : row.device.forget()
+
+            Behavior on Layout.preferredWidth { NumberAnimation { duration: Theme.animationDurations.short } }
+            Behavior on Layout.leftMargin { NumberAnimation { duration: Theme.animationDurations.short } }
+            Behavior on opacity { NumberAnimation { duration: Theme.animationDurations.short } }
         }
 
         TapHandler {
@@ -234,6 +254,14 @@ MorphItem {
         ColumnLayout {
             Layout.fillWidth: true
             visible: view.connectedDevices.length > 0
+            spacing: 4
+
+            Text {
+                text: Localization.bluetooth.connectedLabel
+                color: Theme.colors.textMuted
+                font.family: Theme.font.family
+                font.pixelSize: Theme.font.size - 2
+            }
 
             Repeater {
                 model: view.connectedDevices
@@ -260,7 +288,7 @@ MorphItem {
 
             function activateCurrent() {
                 const item = view.otherDevicesModel[list.currentIndex]
-                if (item && !item.divider) view.activateDevice(item.device)
+                if (item && item.kind === "device") view.activateDevice(item.device)
             }
             Keys.onReturnPressed: list.activateCurrent()
             Keys.onEnterPressed: list.activateCurrent()
@@ -269,9 +297,9 @@ MorphItem {
             // Delegate - siehe WifiView.qml für die Begründung (Qt Quick
             // Layouts unterstützen keine `anchors` auf ihren Kindern).
             // Zusätzlich hier ein Loader statt direkt DeviceRow, damit
-            // Trennlinien-Einträge (device: null) NIE eine DeviceRow-
-            // Instanz erzeugen - deren Bindings lesen ständig row.device.*,
-            // das würde bei null sofort werfen.
+            // Header-Einträge (device: null) NIE eine DeviceRow-Instanz
+            // erzeugen - deren Bindings lesen ständig row.device.*, das
+            // würde bei null sofort werfen.
             delegate: Item {
                 id: wrapper
                 required property var modelData
@@ -282,12 +310,20 @@ MorphItem {
                 Loader {
                     id: rowLoader
                     anchors.fill: parent
-                    sourceComponent: wrapper.modelData.divider ? dividerComponent : deviceComponent
+                    sourceComponent: wrapper.modelData.kind === "header" ? headerComponent : deviceComponent
                 }
 
                 Component {
-                    id: dividerComponent
-                    Divider { width: rowLoader.width }
+                    id: headerComponent
+                    Text {
+                        width: rowLoader.width
+                        height: 24
+                        verticalAlignment: Text.AlignBottom
+                        text: wrapper.modelData.label
+                        color: Theme.colors.textMuted
+                        font.family: Theme.font.family
+                        font.pixelSize: Theme.font.size - 2
+                    }
                 }
 
                 Component {
