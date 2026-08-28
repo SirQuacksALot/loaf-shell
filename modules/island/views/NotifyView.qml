@@ -17,6 +17,32 @@ MorphItem {
 
     required property var islandRoot
 
+    // Nur den Toast selbst zumachen (Ansicht wechseln) - KEIN dismiss()
+    // der zugrunde liegenden Notification, die bleibt in der Historie
+    // (InfoView.qml) erhalten. Von der Flächen-TapHandler unten UND vom
+    // Kreuz-Button genutzt - Kreuz ruft zusätzlich dismiss() davor auf
+    // (siehe dort), das ist der einzige Unterschied zwischen "wegtippen"
+    // und "wirklich verwerfen".
+    function closeToast() {
+        view.islandRoot.forceReveal = false
+        view.islandRoot.closeView()
+        view.islandRoot.updateVisibility()
+    }
+
+    // Toast-Fläche antippen (NICHT das Kreuz - siehe ActionButton unten,
+    // dessen eigener TapHandler konsumiert Taps innerhalb seiner Fläche
+    // zuerst, exakt wie schon bei NetworkRow/DeviceRow in WifiView.qml/
+    // BluetoothView.qml) - löst die "default"-Action der Notification aus,
+    // falls vorhanden (freedesktop-Konvention, siehe Services.Notifications.
+    // invokeDefaultAction()), und schließt in JEDEM Fall den Toast -
+    // unabhängig davon, ob es überhaupt eine Default-Action gab.
+    TapHandler {
+        onTapped: {
+            Services.Notifications.invokeDefaultAction(Services.Notifications.latest)
+            view.closeToast()
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: 12
@@ -75,10 +101,11 @@ MorphItem {
             Layout.alignment: Qt.AlignTop
 
             onTapped: {
+                // Echtes Verwerfen (anders als die Flächen-TapHandler oben) -
+                // die Notification landet dadurch NICHT in der Historie
+                // (InfoView.qml), siehe Services.Notifications.dismiss().
                 if (Services.Notifications.latest) Services.Notifications.dismiss(Services.Notifications.latest)
-                view.islandRoot.forceReveal = false
-                view.islandRoot.closeView()
-                view.islandRoot.updateVisibility()
+                view.closeToast()
             }
         }
     }

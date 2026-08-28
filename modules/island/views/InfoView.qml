@@ -106,6 +106,83 @@ MorphItem {
                     elide: Text.ElideRight
                 }
             }
+
+            // Action-Buttons für benannte, NICHT-Default-Actions (z.B.
+            // "Antworten") - Notification.actions kam bisher NIRGENDS im
+            // Code vor, weder im Service-Snapshot noch hier; die Buttons
+            // existierten auf DBus-Ebene durchaus, wurden nur nie
+            // gerendert. "default" (freedesktop-Konvention: "das passiert
+            // bei Klick auf die Notification selbst", siehe Vencords
+            // Neustart-Hinweis) blendet der Delegate unten per `visible`
+            // selbst aus - dafür gibt's den TapHandler auf der ganzen
+            // Karte, ein zusätzlicher Button dafür wäre doppelt gemoppelt.
+            //
+            // WICHTIG: Repeater.model bekommt die rohe `actions`-Sequenz
+            // DIREKT, kein `.filter(...)` mehr davor in einem eigenen
+            // Property-Binding. Ursprünglich stand hier
+            // `actions.filter(a => a.identifier !== "default")` als
+            // readonly property, direkt als Repeater-Model verwendet -
+            // das hat beim Öffnen dieser View einen harten Absturz
+            // ausgelöst (SIGSEGV/Stack-Overflow in Qts eigener
+            // QVariantMap-Konvertierung, während der Repeater neue
+            // Delegates anlegt - Crash-Report vom 28.08. bestätigt,
+            // Toast/NotifyView.qml mit derselben invokeDefaultAction()-
+            // Logik aber OHNE Repeater/.filter() lief dabei fehlerfrei
+            // weiter). `.filter()` auf einer QML-Sequenz aus QObject-
+            // Zeigern erzeugt bei JEDER Neubewertung ein frisches
+            // JS-Array, das der Repeater als komplett neues Model
+            // interpretiert - deutlich fragiler als die rohe,
+            // eingebaute Sequenz direkt zu nutzen (ein Standard-Pattern,
+            // das QML explizit für Repeater.model unterstützt).
+            RowLayout {
+                id: actionsRow
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                visible: card.notification.notification !== null && card.notification.notification.actions.length > 0
+                spacing: 6
+
+                Repeater {
+                    model: card.notification.notification ? card.notification.notification.actions : []
+                    delegate: MenuButton {
+                        required property var modelData
+                        // "default" hier ausblenden statt vorher
+                        // rauszufiltern (siehe Kommentar oben) - bleibt
+                        // dadurch zwar noch Teil des Models (0 Elemente
+                        // weniger zum Neuanlegen bei jeder Notification-
+                        // Änderung), ist aber der bewusste Kompromiss für
+                        // Stabilität.
+                        visible: modelData.identifier !== "default"
+                        showLabel: true
+                        label: modelData.text
+                        contentPadding: 10
+                        Layout.preferredHeight: 26
+                        // Akzentfarbe statt MenuButtons gedämpftem
+                        // Standard (siehe dortiger Kommentar) - eine
+                        // Notification-Action ist eine echte Aufforderung
+                        // zum Handeln, keine beiläufige Option.
+                        inactiveContentColor: Theme.colors.accent
+                        onTapped: {
+                            // Quelle könnte die Notification zwischen
+                            // Anzeige und Klick bereits geschlossen haben
+                            // (invoke() liefe dann ins Leere) - gleiches
+                            // Absicherungsmuster wie bei dismiss() unten.
+                            // KEIN automatisches dismiss() danach mehr -
+                            // eine Action auszulösen ist ein anderer
+                            // Vorgang als die Notification aus der Liste
+                            // zu entfernen, das bleibt allein dem
+                            // Kreuz-Button vorbehalten (konsistent mit dem
+                            // Karten-Tap für die Default-Action unten).
+                            try {
+                                modelData.invoke();
+                            } catch (e) {
+                                console.warn("InfoView: Notification-Action konnte nicht ausgeführt werden:", e);
+                            }
+                        }
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+            }
         }
 
         ActionButton {
@@ -115,6 +192,16 @@ MorphItem {
             showBackground: false
             tooltip: Localization.info.dismiss
             onTapped: Services.Notifications.dismiss(card.notification)
+        }
+
+        // Karte antippen (nicht die Buttons - deren eigene TapHandler
+        // konsumieren Taps innerhalb ihrer Fläche zuerst, siehe
+        // NotifyView.qml für dieselbe Begründung) löst die "default"-
+        // Action aus, falls vorhanden - KEIN dismiss(), die Notification
+        // bleibt in der Liste stehen (nur das Kreuz entfernt sie
+        // wirklich).
+        TapHandler {
+            onTapped: Services.Notifications.invokeDefaultAction(card.notification)
         }
     }
 

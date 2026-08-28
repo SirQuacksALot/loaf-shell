@@ -98,6 +98,33 @@ Singleton {
         root._history = root._history.filter(e => e.id !== item.id);
     }
 
+    // "default" ist die freedesktop-Notification-Konvention für "das
+    // passiert, wenn man auf die Notification SELBST klickt" (statt auf
+    // einen eigens benannten Action-Button) - z.B. Vencords "Update
+    // verfügbar"-Hinweis nutzt genau das für seinen Neustart-Hinweis.
+    // Andere, eigenständig benannte Actions (z.B. "Antworten") bleiben
+    // davon unberührt und bekommen ihren eigenen Button (siehe
+    // NotificationCard in InfoView.qml) - hier zentral statt in NotifyView.qml
+    // UND InfoView.qml separat dupliziert, beide nutzen das gleichermaßen
+    // (Toast-Fläche antippen bzw. Notification-Karte antippen).
+    // Gibt zurück, ob tatsächlich eine Default-Action gefunden+ausgelöst wurde
+    // (Aufrufer entscheiden selbst, was das für sie bedeutet - z.B. NotifyView
+    // schließt den Toast so oder so, unabhängig vom Rückgabewert).
+    function invokeDefaultAction(entry) {
+        if (!entry || !entry.notification) return false;
+        for (const action of entry.notification.actions) {
+            if (action.identifier === "default") {
+                try {
+                    action.invoke();
+                } catch (e) {
+                    console.warn("Notifications: Default-Action konnte nicht ausgeführt werden:", e);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     function clearAll() {
         for (const e of root._history) {
             if (e.notification) {
