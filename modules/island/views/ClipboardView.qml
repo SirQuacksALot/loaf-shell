@@ -157,7 +157,15 @@ MorphItem {
                 // wird, und würde die Karte sonst genauso aufblähen.
                 Loader {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: card.modelData.isImage ? 120 : undefined
+                    // -1 statt undefined: Layout.preferredHeight ist ein
+                    // double, "undefined" draufzubinden erzeugt bei jedem
+                    // Nicht-Bild-Eintrag eine "Unable to assign [undefined]
+                    // to double"-Warnung - live in mehreren Crash-Logs kurz
+                    // vor einem Absturz im QML-Incubator beobachtet
+                    // (VariantAssociationPrototype::fromQVariantMap). -1
+                    // ist der reguläre "kein bevorzugter Wert"-Zustand,
+                    // Layout fällt dann normal auf implicitHeight zurück.
+                    Layout.preferredHeight: card.modelData.isImage ? 120 : -1
                     sourceComponent: card.modelData.isImage ? thumbComponent : textComponent
                 }
 
