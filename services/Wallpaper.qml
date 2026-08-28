@@ -221,7 +221,24 @@ Singleton {
             "-exec", "readlink", "-f", "{}", ";"]
         stdout: StdioCollector {
             onStreamFinished: {
-                root.files = this.text.trim().length > 0 ? this.text.trim().split("\n") : [];
+                const list = this.text.trim().length > 0 ? this.text.trim().split("\n") : [];
+                // Nur bei tatsächlicher Änderung neu zuweisen: root.files
+                // ist ein Singleton-Property, WallpaperView.localWheel läuft
+                // in JEDEM IslandRoot (= pro Bildschirm) mit. Eine neue
+                // Array-IDENTITÄT hier reißt bei allen Screens gleichzeitig
+                // die komplette Kachel-ListView neu auf (jede Kachel
+                // erzeugt wiederum 2 LucideIcons/FileViews), selbst wenn
+                // sich am Inhalt nichts geändert hat. refresh() wird aber
+                // bei jedem View-Öffnen aufgerufen - meist ohne dass sich
+                // der Ordner seit dem letzten Mal geändert hat. Dieser
+                // Massen-Reincubation-Sturm auf mehreren Screens gleichzeitig
+                // hat live mehrfach den QML-Incubator abstürzen lassen
+                // (SIGSEGV in VariantAssociationPrototype::fromQVariantMap,
+                // siehe Crash-Reports) - ein reiner Inhaltsvergleich vorher
+                // vermeidet die unnötigen Fälle davon.
+                const changed = list.length !== root.files.length
+                    || list.some((p, i) => p !== root.files[i]);
+                if (changed) root.files = list;
             }
         }
     }
