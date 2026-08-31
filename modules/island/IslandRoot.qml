@@ -49,6 +49,15 @@ Scope {
     // ganz normales Hover-Verhalten (weg = 350ms später zu). Der Timer ist
     // also nur die obere Grenze, kein Mindest-Offenbleiben.
     property bool hotkeyHeldOpen: false
+    // Echtes, manuelles Pinnen (eigener Hyprland-Bind, siehe
+    // togglePin()/ShellViewState.qml/bindings.lua) - anders als
+    // hotkeyHeldOpen NICHT zeitlich begrenzt (kein hotkeyHoldTimer), bleibt
+    // offen bis explizit wieder gelöst. Gibt dabei bewusst SOFORT den
+    // exklusiven Tastatur-Grab ab (siehe keyboardFocus/togglePin() unten) -
+    // der Sinn des Pinnens ist ja gerade, die View als Referenz sichtbar zu
+    // behalten, während man anderswo weiterarbeitet, nicht sie exklusiv zu
+    // bedienen.
+    property bool pinned: false
     property bool revealed: false
     property string viewMode: "default"     // welche View geöffnet werden soll, sobald nicht mehr "peek"
 
@@ -110,7 +119,7 @@ Scope {
 
     function updateVisibility() {
         const forceOpenForNotification = root.notificationUnseen && Services.Notifications.count > 0
-        if (triggerHovered || contentHovered || forceReveal || forceOpenForNotification || hotkeyHeldOpen) {
+        if (triggerHovered || contentHovered || forceReveal || forceOpenForNotification || hotkeyHeldOpen || root.pinned) {
             hideTimer.stop()
             idleResetTimer.stop()
             revealed = true
@@ -118,6 +127,28 @@ Scope {
             hideTimer.restart()
             idleResetTimer.restart()
         }
+    }
+
+    // Toggle fürs manuelle Pinnen (siehe pinned oben) - schaltet die
+    // GERADE angezeigte View um, unabhängig davon, wie sie geöffnet wurde
+    // (Hover, Hotkey, Klick). Erneutes Betätigen löst wieder - ohne dass
+    // dabei sonst irgendetwas gehovert/gehalten wird, klappt die Insel
+    // danach über den normalen hideTimer zu, GENAU wie ein manuelles
+    // Schließen das auch täte.
+    function togglePin() {
+        if (root.pinned) {
+            root.pinned = false
+        } else {
+            root.pinned = true
+            // Ein evtl. noch laufendes hotkeyHeldOpen (kurzzeitiges
+            // Offenhalten mit exklusivem Tastatur-Grab, siehe dort) sofort
+            // beenden - Pinnen soll den Grab NICHT übernehmen (siehe
+            // keyboardFocus unten), sonst bliebe er bis zum zufälligen
+            // Ablauf des alten 3s-Timers bestehen.
+            root.hotkeyHeldOpen = false
+            hotkeyHoldTimer.stop()
+        }
+        root.updateVisibility()
     }
 
     // notificationUnseen hält die Insel offen, OHNE dass dafür gehovert
@@ -183,6 +214,12 @@ Scope {
         // updateVisibility() ist, die ohne Hover auskommt.
         root.hotkeyHeldOpen = false
         hotkeyHoldTimer.stop()
+        // Bewusstes Schließen (x-Button, Escape, erneuter Hotkey-Druck)
+        // löst auch ein aktives Pinnen - sonst bliebe die Insel trotz
+        // "geschlossen" über updateVisibility()s pinned-Bedingung
+        // weiterhin sichtbar (gleicher Grund wie beim hotkeyHeldOpen-Reset
+        // direkt darüber).
+        root.pinned = false
     }
 
     // Öffnet/schließt eine beliebige View manuell (Klick auf ein Icon).
@@ -335,6 +372,12 @@ Scope {
             console.warn("SHELLVIEW DEBUG onToggleRequested name=" + name + " screen=" + root.screen.name + " isFocusedScreen=" + root.isFocusedScreen())
             if (root.isFocusedScreen()) root.toggleViewExternally(name)
         }
+        // Gleicher Fokus-Filter wie onToggleRequested oben - ShellViewState
+        // ist ein globales Singleton, pinRequested() erreicht sonst JEDEN
+        // Bildschirm gleichzeitig (siehe dortiger Kommentar).
+        function onPinRequested() {
+            if (root.isFocusedScreen()) root.togglePin()
+        }
     }
 
     // Polkit-Authentifizierungsanfragen laufen NICHT mehr über die Insel -
@@ -412,23 +455,33 @@ Scope {
         // Username-TextField in GithubHeatmap.qml) - kein Exclusive, das
         // würde dauerhaft Fokus von anderen Fenstern klauen.
         //
-        // AUSNAHME: hotkeyHeldOpen (siehe dort) - per Hyprland-Hotkey
-        // geöffnet, OHNE dass die Maus je über der Insel war. OnDemand
-        // "fordert" Fokus zwar an, der Compositor gewährt echten
-        // Keyboard-Fokus für eine Layer-Shell-Surface aber offenbar nur
-        // zuverlässig, wenn der Zeiger auch tatsächlich drüber ist (live
-        // getestet: Escape landete beim Fenster unter der Maus, nicht bei
-        // der - unsichtbar "fokussierten" - Insel). Exclusive erzwingt den
-        // Fokus stattdessen unabhängig von der Zeigerposition - exakt das
-        // Muster, das AppLauncher.qml für denselben Zweck schon nutzt
-        // (WlrKeyboardFocus.Exclusive, solange LauncherState.open) - hier
-        // nur auf das Zeitfenster von hotkeyHeldOpen begrenzt, damit
-        // normales Hovern (z.B. nur die Uhr angucken) nicht dauerhaft
-        // anderen Fenstern den Fokus klaut. (Polkit braucht hier KEINE
-        // Sonderrolle mehr - siehe modules/PolkitOverlay.qml, das läuft
-        // inzwischen als eigenes, separates Fenster mit eigenem
-        // Exclusive-Fokus, nicht mehr über die Insel.)
-        WlrLayershell.keyboardFocus: root.hotkeyHeldOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
+        // AUSNAHME 1: hotkeyHeldOpen (siehe dort) - per Hyprland-Hotkey
+        // kurz geöffnet, OHNE dass die Maus je über der Insel war. OnDemand
+        // "fordert" Fokus zwar an, der Compositor gewährt echten Keyboard-
+        // Fokus für eine Layer-Shell-Surface aber offenbar nur zuverlässig,
+        // wenn der Zeiger auch tatsächlich drüber ist (live getestet:
+        // Escape landete beim Fenster unter der Maus, nicht bei der -
+        // unsichtbar "fokussierten" - Insel). Exclusive erzwingt den Fokus
+        // stattdessen unabhängig von der Zeigerposition - exakt das
+        // Muster, das AppLauncher.qml für denselben Zweck schon nutzt. Nur
+        // auf das kurze Zeitfenster von hotkeyHeldOpen begrenzt (3s, siehe
+        // hotkeyHoldTimer), damit normales Hovern nicht dauerhaft anderen
+        // Fenstern den Fokus klaut.
+        //
+        // AUSNAHME 2, wichtiger: root.pinned (siehe togglePin()) - explizit
+        // manuell gepinnt, bleibt beliebig lange offen. Bekommt bewusst
+        // KEIN Exclusive, selbst wenn hotkeyHeldOpen zufällig noch true
+        // wäre (togglePin() räumt das ohnehin sofort ab) - der Sinn des
+        // Pinnens ist ja gerade, die View als Referenz sichtbar zu
+        // behalten, während man anderswo mit der Tastatur weiterarbeitet,
+        // nicht ihr dauerhaft die Tastatur aller anderen Fenster wegzunehmen.
+        // Tastatur-Interaktion MIT einer gepinnten View (Escape, Tab,
+        // TextFields) funktioniert dadurch nur noch, solange man
+        // tatsächlich drüber hovert - bewusster Trade-off zugunsten von
+        // "andere Programme bleiben nutzbar". (Polkit braucht hier KEINE
+        // Sonderrolle - siehe modules/PolkitOverlay.qml, läuft als eigenes
+        // Fenster mit eigenem Exclusive-Fokus, nicht über die Insel.)
+        WlrLayershell.keyboardFocus: (root.hotkeyHeldOpen && !root.pinned) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
 
         anchors { top: true; left: true; right: true }
 

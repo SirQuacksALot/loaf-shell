@@ -30,9 +30,17 @@ Singleton {
     id: root
 
     signal toggleRequested(string name)
+    // Kein Name als Payload nötig - wirkt immer auf die aktuell offene
+    // View (siehe IslandRoot.qml/togglePin()). Eigenes Signal statt
+    // toggleRequested mit einem Sonder-Namen zu überladen - "pin" ist
+    // konzeptionell keine View, sondern ein Verhalten (bleib offen, gib
+    // den exklusiven Tastatur-Fokus ab), unabhängig davon, welche View
+    // gerade aktiv ist.
+    signal pinRequested()
 
     IpcHandler {
         target: "shell"
         function toggle(name: string): void { root.toggleRequested(name) }
+        function pin(): void { root.pinRequested() }
     }
 }
