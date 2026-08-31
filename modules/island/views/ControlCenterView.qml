@@ -126,14 +126,6 @@ MorphItem {
                 showLabel: true
                 label: Localization.controlCenter.vpn
                 active: view.islandRoot.viewMode === "vpn"
-                // Noch deaktiviert - VpnView.qml/services/Vpn.qml sind
-                // bewusst noch Mock (siehe dortiger Kommentar), bis klar
-                // ist, welche VPN-Clients konkret unterstützt werden
-                // sollen. Button ist schon an seinem finalen Platz
-                // sichtbar, aber nicht antippbar (MenuButtons `available`
-                // dimmt + deaktiviert TapHandler/Fokus, dasselbe Muster
-                // wie Services.Bluetooth.available beim Bluetooth-Button).
-                available: false
                 tooltip: Localization.controlCenter.vpnTooltip
                 onTapped: view.islandRoot.openView("vpn")
             }
