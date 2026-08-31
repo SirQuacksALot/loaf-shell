@@ -417,27 +417,8 @@ MorphItem {
                 columnSpacing: 16
                 rowSpacing: 2
 
-                component StatRow: RowLayout {
-                    id: statRow
-                    required property string label
-                    required property string value
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: statRow.label
-                        color: Theme.colors.textMuted
-                        font.family: Theme.font.family
-                        font.pixelSize: Theme.font.size - 3
-                    }
-                    Text {
-                        text: statRow.value
-                        color: Theme.colors.text
-                        font.family: Theme.font.family
-                        font.pixelSize: Theme.font.size - 3
-                    }
-                }
+                // StatRow lebt jetzt in modules/island/StatRow.qml - auch
+                // von VpnView.qml gebraucht, siehe dortiger Kommentar.
 
                 StatRow {
                     Layout.columnSpan: 2
