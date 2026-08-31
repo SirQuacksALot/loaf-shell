@@ -52,4 +52,9 @@ ShellRoot {
 
     // Dito - Lautstärke-/Helligkeit-/Submap-OSD, siehe services/Osd.qml.
     OsdOverlay {}
+
+    // Dito - hält (falls aktiviert, siehe services/IdleInhibit.qml) den
+    // Bildschirm über das Wayland-Idle-Inhibit-Protokoll wach. Selbst
+    // unsichtbar, ein Monitor reicht dafür völlig aus.
+    IdleInhibitAnchor {}
 }

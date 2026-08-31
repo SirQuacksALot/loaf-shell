@@ -104,6 +104,7 @@ Singleton {
 
     readonly property QtObject controlCenter: QtObject {
         readonly property string doNotDisturb: "Nicht stören"
+        readonly property string idleInhibit: "Bildschirm wach halten"
         readonly property string clipboard: "Zwischenablage"
         readonly property string wallpaper: "Wallpaper"
         readonly property string powerMenu: "Power-Menü"

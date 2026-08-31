@@ -35,7 +35,8 @@ MorphItem {
     onActiveChanged: if (view.active) view.forceActiveFocus()
 
     readonly property var quickActionLabels: ({
-        dnd: Localization.controlCenter.doNotDisturb, clipboard: Localization.controlCenter.clipboard,
+        dnd: Localization.controlCenter.doNotDisturb, idleinhibit: Localization.controlCenter.idleInhibit,
+        clipboard: Localization.controlCenter.clipboard,
         wallpaper: Localization.controlCenter.wallpaper, powermenu: Localization.controlCenter.powerMenu
     })
 
@@ -53,6 +54,7 @@ MorphItem {
     // Zeile wie WLAN/Bluetooth, siehe unten) statt kleiner Icon-Kacheln.
     readonly property var quickActions: [
         { id: "dnd",         icon: "bell-off",       active: Services.Notifications.doNotDisturb, kind: "toggle" },
+        { id: "idleinhibit", icon: "coffee",         active: Services.IdleInhibit.inhibited, kind: "toggle" },
         { id: "clipboard",   icon: "clipboard-list", active: view.islandRoot.viewMode === "clipboard", kind: "view" },
         { id: "wallpaper",   icon: "wallpaper",     active: view.islandRoot.viewMode === "wallpaper", kind: "view" },
         { id: "powermenu",   icon: "power",         active: view.islandRoot.viewMode === "powermenu", kind: "view" }
@@ -60,6 +62,7 @@ MorphItem {
 
     function runQuickAction(id, kind) {
         if (id === "dnd") Services.Notifications.toggleDnd();
+        else if (id === "idleinhibit") Services.IdleInhibit.toggle();
         else view.islandRoot.openView(id);
     }
 
