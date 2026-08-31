@@ -288,7 +288,13 @@ MorphItem {
                 Layout.fillHeight: true
                 clip: true
                 spacing: 4
-                model: Services.Notifications.groupedList
+                // Echtes ListModel, inkrementell gepflegt (siehe
+                // Notifications.qml, groupedModel-Kommentar) - NICHT mehr
+                // eine bei jeder Notification komplett neu berechnete
+                // var-Property. Grund: genau das hat wiederholt zu
+                // SIGSEGV-Abstürzen in Qts QML-Engine geführt, siehe
+                // dortiger Kommentar für Details.
+                model: Services.Notifications.groupedModel
 
                 // Eine Gruppe (alle Notifications EINER App) liegt "auf
                 // einem Haufen": nur die oberste (= neueste) Karte ist
@@ -300,16 +306,26 @@ MorphItem {
                 // Kategorie-Anzeige - man sieht/verwirft einfach
                 // Notification für Notification. Verwerfen der obersten
                 // Karte lässt automatisch die nächstältere nachrücken,
-                // weil sich die Gruppe live aus
-                // Services.Notifications.groupedList neu berechnet.
+                // weil `notificationIds` als Model-Rolle neu bindet, sobald
+                // Notifications.qml diese eine Zeile per setProperty()
+                // aktualisiert.
                 delegate: Item {
                     id: groupCard
-                    required property var modelData
+                    // Kommagetrennter String, kein Array - siehe Kommentar
+                    // bei Notifications.qml::_addToGroups() (jedes Array als
+                    // ListModel-Rolle wird von QML automatisch in ein
+                    // eigenes Sub-Model umgewandelt, live bestätigt sowohl
+                    // mit Objekten als auch mit simplen Zahlen drin). Hier,
+                    // in einer normalen property (keine ListModel-Rolle
+                    // mehr), zurück in ein echtes Array parsen. Volle
+                    // Notification-Daten kommen per entryById().
+                    required property string notificationIds
                     required property int index
                     width: ListView.view.width
 
-                    readonly property var notifications: groupCard.modelData.notifications
-                    readonly property int peekCount: Math.min(groupCard.notifications.length - 1, 2)
+                    readonly property var idList: groupCard.notificationIds.split(",").map(Number)
+
+                    readonly property int peekCount: Math.min(groupCard.idList.length - 1, 2)
 
                     // Plain Item statt Layout - anders als ColumnLayout/
                     // RowLayout bindet Item seine height NICHT automatisch
@@ -349,7 +365,7 @@ MorphItem {
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        notification: groupCard.notifications[0]
+                        notification: Services.Notifications.entryById(groupCard.idList[0])
                     }
                 }
             }

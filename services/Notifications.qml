@@ -56,22 +56,93 @@ Singleton {
 
     // Wie `list`, aber nach appName gruppiert - für InfoView.qml, um
     // Notifications derselben App gestapelt statt als lose Einzelkarten
-    // darzustellen. Jede Gruppe: { appName, notifications } (letzteres
-    // selbst wieder neueste zuerst, da `list` das bereits ist). Die
-    // Gruppen-Reihenfolge ergibt sich automatisch richtig: eine Gruppe
-    // taucht an der Stelle ihrer ERSTEN (= neuesten) Notification in
-    // `list` auf, alles Ältere derselben App wird nur noch angehängt.
-    readonly property var groupedList: {
-        const groups = [];
-        const byApp = {};
-        for (const n of root.list) {
-            if (!byApp[n.appName]) {
-                byApp[n.appName] = { appName: n.appName, notifications: [] };
-                groups.push(byApp[n.appName]);
-            }
-            byApp[n.appName].notifications.push(n);
+    // darzustellen. Jede Zeile: { appName, notificationIds } (letzteres
+    // selbst wieder neueste zuerst) - bewusst nur IDs, keine vollen
+    // Einträge, siehe Kommentar bei `notificationIds` unten.
+    //
+    // WICHTIG: Das ist bewusst ein echtes, INKREMENTELL gepflegtes
+    // ListModel statt einer bei jeder `_history`-Änderung komplett neu
+    // berechneten `var`-Property (das war es früher - ein Array aus
+    // frischen JS-Objekten, bei JEDER einzelnen Notification neu gebaut,
+    // direkt als ListView.model in InfoView.qml verwendet). Genau dasselbe
+    // Anti-Pattern wie beim `actions`-Repeater dort (siehe dortiger
+    // Kommentar zum `.filter()`-Fix vom 28.08.) - nur ungleich wirkungsvoller,
+    // weil es die GESAMTE Notification-Liste bei JEDEM Event betraf: ein
+    // frisches Array wird von QML als komplett neues Model interpretiert,
+    // die ListView wirft dabei ALLE Delegates weg und inkubiert sie neu.
+    // Bei einer großen, nie manuell geleerten Historie plus `keepOnReload`
+    // (feuert `onNotification` beim Start einmal PRO alter Notification neu,
+    // siehe unten) lief das als Burst von komplett neuen Modellen in
+    // Folge - genau das hat wiederholt zu SIGSEGV-Abstürzen tief in Qts
+    // QML-Engine geführt (QQmlIncubatorPrivate::incubate ->
+    // writeKnownVarProperty -> VariantAssociationPrototype::fromQVariantMap,
+    // 5 bestätigte Crash-Reports zwischen 28.08. und 01.09.). Mit einem
+    // ListModel + insert/move/setProperty/remove ändert sich bei einem
+    // einzelnen Event immer nur EINE Zeile - alle anderen Gruppen-Delegates
+    // bleiben unangetastet bestehen, kein Massen-Reinkubieren mehr.
+    readonly property ListModel groupedModel: ListModel {}
+
+    // Liefert den Index der Gruppe zu appName, oder -1.
+    function _groupIndex(appName) {
+        for (let i = 0; i < root.groupedModel.count; i++) {
+            if (root.groupedModel.get(i).appName === appName) return i;
         }
-        return groups;
+        return -1;
+    }
+
+    // Nachschlagen des vollen Eintrags per id - einzige Quelle bleibt
+    // `_history`, das Grouped-Model selbst hält nur IDs (s.u.).
+    function entryById(id) {
+        return root._history.find(e => e.id === id) || null;
+    }
+
+    // Neuen Eintrag einsortieren. Gruppenreihenfolge = Position der jeweils
+    // NEUESTEN Notification (gleiche Regel wie früher) - eine Gruppe landet
+    // deshalb bei einem neuen Eintrag immer vorne (Index 0), egal ob sie
+    // gerade erst entsteht (insert) oder schon existiert (move).
+    //
+    // WICHTIG: `notificationIds` ist ein KOMMAGETRENNTER STRING, kein
+    // Array. Erster Versuch war ein echtes Array aus IDs (Zahlen) - live
+    // getestet und live widerlegt: JEDES Array, das man einer ListModel-
+    // Rolle zuweist, wandelt QML automatisch in ein eigenes verschachteltes
+    // Sub-Model um (`get(idx).notificationIds` lieferte dabei ein Objekt
+    // mit `count`/`dynamicRoles`/... statt eines JS-Arrays) - unabhängig
+    // davon, ob die Array-Elemente Objekte oder simple Zahlen sind. Ein
+    // String-Wert bleibt dagegen ein normaler Skalar, komplett immun
+    // gegen diese Automatik. `.split(",").map(Number)` baut daraus ganz
+    // regulär (außerhalb der ListModel-Rolle, in einer normalen
+    // property var im Delegate) wieder ein echtes Array. Die vollen
+    // Notification-Daten kommen bei Bedarf per `entryById()` aus `_history`.
+    function _addToGroups(entry) {
+        const idx = root._groupIndex(entry.appName);
+        if (idx === -1) {
+            root.groupedModel.insert(0, { appName: entry.appName, notificationIds: String(entry.id) });
+            return;
+        }
+        const ids = entry.id + "," + root.groupedModel.get(idx).notificationIds;
+        root.groupedModel.setProperty(idx, "notificationIds", ids);
+        if (idx !== 0) root.groupedModel.move(idx, 0, 1);
+    }
+
+    // Entfernt einen Eintrag (per id) aus JEDER Gruppe, in der er vorkommt -
+    // spiegelt dieselbe Semantik wie der `_history`-Filter unten (kein
+    // Abbruch nach dem ersten Treffer). Rückwärts iterieren, weil
+    // `remove()` nachfolgende Indizes verschiebt. Wird eine Gruppe dabei
+    // leer, verschwindet die Zeile komplett - die nächstältere Notification
+    // rutscht automatisch nach, weil `notificationIds[0]` in InfoView.qml
+    // neu bindet, sobald sich die Zeile ändert.
+    function _removeFromGroups(entryId) {
+        for (let i = root.groupedModel.count - 1; i >= 0; i--) {
+            const group = root.groupedModel.get(i);
+            const ids = group.notificationIds.split(",").map(Number);
+            const filtered = ids.filter(id => id !== entryId);
+            if (filtered.length === ids.length) continue;
+            if (filtered.length === 0) {
+                root.groupedModel.remove(i);
+            } else {
+                root.groupedModel.setProperty(i, "notificationIds", filtered.join(","));
+            }
+        }
     }
 
     // Do-Not-Disturb: Notifications werden weiter getrackt (landen in der
@@ -96,6 +167,7 @@ Singleton {
             try { raw.dismiss(); } catch (e) { /* Quelle hat's evtl. schon selbst geschlossen */ }
         }
         root._history = root._history.filter(e => e.id !== item.id);
+        root._removeFromGroups(item.id);
     }
 
     // "default" ist die freedesktop-Notification-Konvention für "das
@@ -132,6 +204,7 @@ Singleton {
             }
         }
         root._history = [];
+        root.groupedModel.clear();
     }
 
     function saveDnd() {
@@ -208,6 +281,7 @@ Singleton {
             const next = root._history.concat([entry]);
             next.sort((a, b) => b.id - a.id);
             root._history = next;
+            root._addToGroups(entry);
 
             closedTracker.createObject(root, { entry: entry, n: notification });
         }
