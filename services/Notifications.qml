@@ -96,6 +96,23 @@ Singleton {
         return root._history.find(e => e.id === id) || null;
     }
 
+    // Geschützter Zugriff auf die Actions-Sequenz eines Eintrags - direkt
+    // in einem QML-Binding gelesen (`entry.notification.actions`) wirft
+    // das eine TypeError, sobald `entry.notification` zwar nicht null,
+    // das zugrunde liegende native Objekt aber schon tot ist (siehe
+    // invokeDefaultAction() oben für den identischen Fall). Ein Binding
+    // kann kein try/catch haben - deshalb hier als Funktion, InfoView.qml
+    // nutzt NUR noch diese statt `entry.notification.actions` direkt
+    // anzufassen.
+    function safeActions(entry) {
+        if (!entry || !entry.notification) return [];
+        try {
+            return entry.notification.actions;
+        } catch (e) {
+            return [];
+        }
+    }
+
     // Neuen Eintrag einsortieren. Gruppenreihenfolge = Position der jeweils
     // NEUESTEN Notification (gleiche Regel wie früher) - eine Gruppe landet
     // deshalb bei einem neuen Eintrag immer vorne (Index 0), egal ob sie
@@ -184,15 +201,25 @@ Singleton {
     // schließt den Toast so oder so, unabhängig vom Rückgabewert).
     function invokeDefaultAction(entry) {
         if (!entry || !entry.notification) return false;
-        for (const action of entry.notification.actions) {
-            if (action.identifier === "default") {
-                try {
+        // Der obige Null-Check schützt nur gegen den saubereren Fall, dass
+        // unser closedTracker `entry.notification` schon selbst auf null
+        // gesetzt hat (siehe dort). Er schützt NICHT gegen ein bereits vom
+        // nativen Objekt her TOTES Notification-Objekt, dessen JS-Referenz
+        // trotzdem noch nicht null ist - passiert bei Apps wie vesktop
+        // ständig (schließen eigene ältere Notifications selbst im
+        // Hintergrund, siehe `_history`-Kommentar oben). Der Zugriff auf
+        // `.actions` wirft dann eine TypeError, live beobachtet (u.a. als
+        // letzte Log-Zeile vor einem der SIGSEGV-Crash-Reports vom 31.08.).
+        // Deshalb der GESAMTE Zugriff im try/catch, nicht nur invoke().
+        try {
+            for (const action of entry.notification.actions) {
+                if (action.identifier === "default") {
                     action.invoke();
-                } catch (e) {
-                    console.warn("Notifications: Default-Action konnte nicht ausgeführt werden:", e);
+                    return true;
                 }
-                return true;
             }
+        } catch (e) {
+            console.warn("Notifications: Default-Action konnte nicht ausgeführt werden (Notification vermutlich bereits ungültig):", e);
         }
         return false;
     }

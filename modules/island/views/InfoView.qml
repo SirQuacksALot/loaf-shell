@@ -39,6 +39,14 @@ MorphItem {
         id: card
         required property var notification
 
+        // Über Services.Notifications.safeActions() statt direkt
+        // `notification.notification.actions` in den Bindings unten zu
+        // lesen - ein Binding kann kein try/catch haben, würde also mit
+        // einer TypeError hängen bleiben, sobald `notification.notification`
+        // zwar nicht null, das native Objekt aber schon tot ist (siehe
+        // Notifications.qml::invokeDefaultAction() für denselben Fall).
+        readonly property var actions: Services.Notifications.safeActions(card.notification)
+
         // Anders als WLAN/Bluetooth/Clipboard: hier IMMER eine Fläche,
         // nicht nur bei Hover - siehe alwaysVisible-Kommentar in
         // ListCard.qml (ohne das wirkte die Karte bei nur einer
@@ -117,32 +125,35 @@ MorphItem {
             // selbst aus - dafür gibt's den TapHandler auf der ganzen
             // Karte, ein zusätzlicher Button dafür wäre doppelt gemoppelt.
             //
-            // WICHTIG: Repeater.model bekommt die rohe `actions`-Sequenz
-            // DIREKT, kein `.filter(...)` mehr davor in einem eigenen
-            // Property-Binding. Ursprünglich stand hier
-            // `actions.filter(a => a.identifier !== "default")` als
-            // readonly property, direkt als Repeater-Model verwendet -
-            // das hat beim Öffnen dieser View einen harten Absturz
-            // ausgelöst (SIGSEGV/Stack-Overflow in Qts eigener
-            // QVariantMap-Konvertierung, während der Repeater neue
-            // Delegates anlegt - Crash-Report vom 28.08. bestätigt,
+            // WICHTIG: Repeater.model bekommt über `card.actions` (siehe
+            // oben) die rohe `actions`-Sequenz UNVERÄNDERT durchgereicht,
+            // kein `.filter(...)` davor in einem eigenen Property-Binding.
+            // Ursprünglich stand hier `actions.filter(a => a.identifier
+            // !== "default")` als readonly property, direkt als
+            // Repeater-Model verwendet - das hat beim Öffnen dieser View
+            // einen harten Absturz ausgelöst (SIGSEGV/Stack-Overflow in
+            // Qts eigener QVariantMap-Konvertierung, während der Repeater
+            // neue Delegates anlegt - Crash-Report vom 28.08. bestätigt,
             // Toast/NotifyView.qml mit derselben invokeDefaultAction()-
             // Logik aber OHNE Repeater/.filter() lief dabei fehlerfrei
             // weiter). `.filter()` auf einer QML-Sequenz aus QObject-
             // Zeigern erzeugt bei JEDER Neubewertung ein frisches
             // JS-Array, das der Repeater als komplett neues Model
-            // interpretiert - deutlich fragiler als die rohe,
-            // eingebaute Sequenz direkt zu nutzen (ein Standard-Pattern,
-            // das QML explizit für Repeater.model unterstützt).
+            // interpretiert - deutlich fragiler als die rohe, eingebaute
+            // Sequenz direkt zu nutzen (ein Standard-Pattern, das QML
+            // explizit für Repeater.model unterstützt). `card.actions`
+            // selbst filtert/kopiert nicht, sondern reicht nur per
+            // try/catch geschützt durch (siehe Notifications.qml::
+            // safeActions()) - reißt diese Eigenschaft also nicht wieder ein.
             RowLayout {
                 id: actionsRow
                 Layout.fillWidth: true
                 Layout.topMargin: 4
-                visible: card.notification.notification !== null && card.notification.notification.actions.length > 0
+                visible: card.actions.length > 0
                 spacing: 6
 
                 Repeater {
-                    model: card.notification.notification ? card.notification.notification.actions : []
+                    model: card.actions
                     delegate: MenuButton {
                         required property var modelData
                         // "default" hier ausblenden statt vorher
