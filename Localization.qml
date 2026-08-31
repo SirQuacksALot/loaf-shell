@@ -116,7 +116,7 @@ Singleton {
         readonly property string audioSource: "Audioquelle"
         readonly property string audioSourceTooltip: "Audio-Ein-/Ausgabegerät wählen"
         readonly property string vpn: "VPN"
-        readonly property string vpnTooltip: "VPN noch nicht verfügbar"
+        readonly property string vpnTooltip: "VPN-Einstellungen öffnen"
     }
 
     readonly property QtObject github: QtObject {
@@ -165,6 +165,45 @@ Singleton {
         readonly property string qrTooltip: "WLAN als QR-Code teilen"
         readonly property string qrHint: "Mit dem Handy scannen, um beizutreten"
         readonly property string qrFailed: "QR-Code konnte nicht erstellt werden"
+        readonly property string ipLabel: "IP-Adresse"
+        readonly property string latencyLabel: "Latenz"
+        readonly property string packetLossLabel: "Paketverlust"
+        readonly property string receivingLabel: "Empfangen"
+        readonly property string sendingLabel: "Gesendet"
+        readonly property string downloadedLabel: "Heruntergeladen"
+        readonly property string uploadedLabel: "Hochgeladen"
+    }
+
+    readonly property QtObject vpn: QtObject {
+        // Reiter oben - eduVPN ist strukturell schon da (siehe
+        // services/Vpn.qml/eduvpnConnections), aber ohne echten Client
+        // dahinter noch deaktiviert (VpnView.qml: `available: false` am
+        // Tab-Button).
+        readonly property string tabOpenvpn: "OpenVPN"
+        readonly property string tabEduvpn: "eduVPN"
+        readonly property string tabEduvpnTooltip: "eduVPN wird noch nicht unterstützt"
+
+        readonly property string connected: "Verbunden"
+        readonly property string disconnected: "Getrennt"
+        readonly property string connecting: "Verbindet…"
+        readonly property string disconnecting: "Trennt…"
+        readonly property string connect: "Verbinden"
+        readonly property string disconnect: "Trennen"
+        readonly property string forget: "Entfernen"
+        readonly property string forgetTooltip: "Verbindung entfernen"
+
+        readonly property string fullTunnelLabel: "Voller Tunnel"
+        readonly property string splitTunnelLabel: "Split-Tunnel"
+        readonly property string tunnelTooltip: "Voller Tunnel: kompletter Datenverkehr über die VPN-Verbindung. Split-Tunnel: nur die vom Server vorgegebenen Routen."
+        readonly property string autoStartLabel: "Automatisch verbinden"
+        readonly property string autoStartTooltip: "Beim Anmelden automatisch mit dieser Verbindung verbinden"
+
+        readonly property string noConnections: "Keine OpenVPN-Verbindungen"
+        readonly property string dropHint: "OpenVPN-Datei (.ovpn) hier ablegen"
+        readonly property string dropHintActive: "Loslassen zum Hinzufügen"
+        readonly property string importFailedPrefix: "Import fehlgeschlagen: "
+        readonly property string actionFailedPrefix: "Fehler: "
+
         readonly property string ipLabel: "IP-Adresse"
         readonly property string latencyLabel: "Latenz"
         readonly property string packetLossLabel: "Paketverlust"

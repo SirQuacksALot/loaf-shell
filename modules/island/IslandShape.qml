@@ -36,6 +36,7 @@ MorphContainer {
     Views.ControlCenterView { islandRoot: shape.islandRoot }
     Views.WifiView { islandRoot: shape.islandRoot }
     Views.BluetoothView { islandRoot: shape.islandRoot }
+    Views.VpnView { islandRoot: shape.islandRoot }
     Views.PowerMenuView { islandRoot: shape.islandRoot }
     Views.GithubView { islandRoot: shape.islandRoot }
     Views.WallpaperView { islandRoot: shape.islandRoot }
